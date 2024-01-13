@@ -6,7 +6,7 @@ export const cardsApi = createApi({
     baseUrl: "https://deckofcardsapi.com/api/deck",
   }),
   endpoints: (builder) => ({
-    newDeck: builder.query({
+    getNewDeck: builder.query({
       query: () => "new/shuffle",
     }),
     getDeckInfo: builder.query({
@@ -25,7 +25,7 @@ export const cardsApi = createApi({
         url: `${deck_id}/pile/${pile_name}/list`,
       }),
     }),
-    drawACard: builder.query({
+    drawCard: builder.query({
       query: (args) => ({
         url: `${deck_id}/draw/`,
         method: "GET",
@@ -36,10 +36,10 @@ export const cardsApi = createApi({
 });
 
 export const {
-  useNewDeckQuery,
-  useDrawACardQuery,
+  useDrawCardQuery,
+  useGetNewDeckQuery,
   useGetDeckInfoQuery,
-  useLazyDrawACardQuery,
+  useLazyDrawCardQuery,
   useCreateNewPileQuery,
   useReturnCardToDeckQuery,
   useLazyReturnCardToDeckQuery,

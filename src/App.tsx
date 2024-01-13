@@ -1,26 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { startGame } from "./store/store";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 
 import Game from "./components/Game";
 import Loading from "./components/Loading";
 
 import "./App.css";
-import { useCreateNewPileQuery, useNewDeckQuery } from "./store/services/api";
+import {
+  useDrawCardQuery,
+  useGetNewDeckQuery,
+  // useCreateNewPileQuery,
+} from "./store/services/api";
 
 function App() {
   let content: React.ReactElement;
   const dispatch = useAppDispatch();
+  const { currentData: cardsData, isLoading: cardsDataLoading } =
+    useDrawCardQuery({ count: 28 });
   const [isLoading, setIsLoading] = useState(true);
   const [startBtnClicked, setStartBtnClicked] = useState(false);
   const gameStarted = useAppSelector((state) => state.game.started);
-  const { data, isLoading: gameDataLoading } = useNewDeckQuery(null, {
+  const { data, isLoading: gameDataLoading } = useGetNewDeckQuery(null, {
     skip: !startBtnClicked,
   });
 
-  setTimeout(() => setIsLoading(false), 2000);
+  useEffect(() => {
+    if (!cardsDataLoading)
+      setTimeout(() => setIsLoading(cardsDataLoading), 2000);
+    else setIsLoading(cardsDataLoading);
+  }, [cardsDataLoading]);
   const startGameFunc = () => setStartBtnClicked(true);
 
   if (startBtnClicked && !gameDataLoading) {
@@ -29,14 +37,16 @@ function App() {
   }
 
   content = gameStarted ? (
-    <Game />
+    <Game cardsData={cardsData} />
   ) : (
-    <button className="start" onClick={startGameFunc}>
-      Start Game
-    </button>
+    <div className="bg-black w-screen h-screen flex items-center justify-center">
+      <button className="start bg-white" onClick={startGameFunc}>
+        Start Game
+      </button>
+    </div>
   );
   return (
-    <DndProvider backend={HTML5Backend}>
+    <>
       {isLoading || gameDataLoading ? (
         <Loading
           content={gameDataLoading ? "Starting Game ..." : "Loading..."}
@@ -44,7 +54,7 @@ function App() {
       ) : (
         content
       )}
-    </DndProvider>
+    </>
   );
 }
 

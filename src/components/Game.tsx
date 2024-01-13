@@ -1,61 +1,23 @@
 import { useState, useEffect } from "react";
 import {
-  useDrawACardQuery,
-  useLazyDrawACardQuery,
+  useLazyDrawCardQuery,
   useLazyReturnCardToDeckQuery,
-  useReturnCardToDeckQuery,
+  // useReturnCardToDeckQuery,
 } from "../store/services/api";
-import { CardTypes } from "./dragTypes";
-import { useDrag, useDragLayer } from "react-dnd";
+import Draggable from "react-draggable";
 
+import dragClickSound from "../sounds/dragClick.mp3";
+import wrongMoveSound from "../sounds/wrongMove.mp3";
+import correctMoveSound from "../sounds/correctMove.mp3";
 
-// export const CustomDragLayer = () => {
-//   const { itemType, isDragging, item, initialOffset, currentOffset } =
-//     useDragLayer((monitor) => ({
-//       item: monitor.getItem(),
-//       itemType: monitor.getItemType(),
-//       initialOffset: monitor.getInitialSourceClientOffset(),
-//       currentOffset: monitor.getSourceClientOffset(),
-//       isDragging: monitor.isDragging(),
-//     }));
-//   function renderItem() {
-//     switch (itemType) {
-//       case ItemTypes.BOX:
-//         return <BoxDragPreview title={item.title} />;
-//       default:
-//         return null;
-//     }
-//   }
-//   if (!isDragging) {
-//     return null;
-//   }
-//   return (
-//     <div style={layerStyles}>
-//       <div
-//         style={getItemStyles(initialOffset, currentOffset, props.snapToGrid)}
-//       >
-//         {renderItem()}
-//       </div>
-//     </div>
-//   );
-// };
-
-
-const Game = () => {
+const Game = ({ cardsData }: { cardsData: any }) => {
   const cardImgBaseUrl = "https://deckofcardsapi.com/static/img/";
   const cardBack = `${cardImgBaseUrl}back.png`;
   const [deckCards, setDeckCards] = useState([]);
   const [drawDeckCard, setDrawDeckCard] = useState(false);
-  const { data } = useDrawACardQuery({ count: 28 });
-  const [drawAcard, results] = useLazyDrawACardQuery();
+  const [drawAcard, results] = useLazyDrawCardQuery();
   const [returnCard] = useLazyReturnCardToDeckQuery();
-
-  const [{ isDragging }, dragCard] = useDrag(() => ({
-    type: CardTypes.RED,
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging()
-    }),
-  }));
+  const [cardPostition, setCardPosition] = useState({ x: 0, y: 0 });
 
   const tableau = new Array(7);
   for (let i = 0; i < tableau.length; i++) {
@@ -63,7 +25,7 @@ const Game = () => {
       j === 0 ? 0 : (j += getStart(j - 1));
     const start = getStart(i);
     const end = start + i + 1;
-    tableau[i] = data?.cards.slice(start, end);
+    tableau[i] = cardsData?.cards.slice(start, end);
   }
 
   const result = [
@@ -86,16 +48,10 @@ const Game = () => {
   //   console.log(event.dataTransfer);
   // };
 
-  const drop = (event: React.DragEvent) => {
-    console.log(event.target);
-    const data = event.dataTransfer.getData("text/plain");
-    console.log(data);
-  };
-
-  const allowDrop = (event: React.DragEvent) => event.preventDefault();
-
-  const drawFromDeck = () => {
-    drawAcard({ count: 1 });
+  const drawFromDeck = async () => {
+    new Audio(dragClickSound).play();
+    const card = await drawAcard({ count: 1 });
+    console.log(card);
     if (drawDeckCard) {
       const cards = deckCards.map((card: any) => card.code).join(",");
       returnCard({ cards });
@@ -111,77 +67,122 @@ const Game = () => {
     console.log(results);
   }, [results]);
 
+  const dragStartEventHandler = () => {
+    console.log("hi");
+    var audio = new Audio(dragClickSound);
+    audio.play();
+  };
+
+  const dragEventHandler = (e: any, data: any) => {
+    data.node.style.zIndex = 30;
+  };
+
+  const dragEndEventHandler = (e: any, data: any) => {
+    const audio = new Audio(correctMoveSound);
+    // audio.play();
+    data.node.style.zIndex = 10;
+  };
+
   return (
     <div
-      className={`relative w-screen h-screen bg-[url(./assets/bg5.jpg)] bg-center bg-no-repeat bg-cover grid grid-cols-3 grid-rows-2 gap-10 p-4`}
+      className={`relative w-screen h-screen bg-[url(./assets/bg5.jpg)] bg-center bg-no-repeat bg-cover grid`}
     >
-      <div className="flex gap-8 z-10">
-        <button
-          className="w-40 h-48 relative flex flex-col items-center"
-          onClick={drawFromDeck}
-        >
-          {new Array(5).fill("").map((f, i: number) => (
-            <img
-              draggable="false"
-              className="absolute"
-              style={{ top: `${i * 0.1}rem` }}
-              src={cardBack}
-              alt=""
-            />
-          ))}
-        </button>
-        <div className="reltaive h-56 w-40">
-          {deckCards.map((img: any) => (
-            <img
-              src={img.image}
-              ref={dragCard}
-              data-code={img.code}
-              data-value={img.value}
-              data-color={suitColor(img.suit)}
-              className="w-full h-full cursor-grab"
-            />
-          ))}
-        </div>
-      </div>
-      <div className="col-span-2 gap-5 flex z-10 justify-end">
-        {result.map((suit) => (
-          <div
-            className="h-56 text-9xl border-dashed border w-full max-w rounded-lg flex flex-col items-center justify-center"
-            style={{
-              color: suitColor(suit.name),
-              maxWidth: "10rem",
-            }}
-          >
-            {suit.name === "hearts"
-              ? "♥️"
-              : suit.name === "clubs"
-              ? "♣️"
-              : suit.name === "spades"
-              ? "♠️"
-              : "♦️"}
-          </div>
-        ))}
-      </div>
       <div
-        className="col-span-3 gap-2 flex justify-around z-10"
+        className={`relative w-full h-full max-w-[100rem]  bg-center bg-no-repeat bg-cover grid grid-cols-3 grid-rows-2 gap-10 p-4 z-10 m-auto`}
       >
-        {tableau?.map((arr) => {
-          return (
-            <div className="w-full h-full relative flex flex-col items-center z-40">
-              {arr.map((img: any, i: number) => (
+        <div className="flex gap-8">
+          <button
+            className="w-40 h-48 relative flex flex-col"
+            onClick={drawFromDeck}
+          >
+            {new Array(5).fill("").map((_, i: number) => (
+              <img
+                draggable={false}
+                className="absolute h-40"
+                style={{ top: `${i * 0.1}rem` }}
+                src={cardBack}
+                alt=""
+              />
+            ))}
+          </button>
+          <div className="reltaive h-40 mt-1.5">
+            {deckCards.map((img: any) => (
+              <Draggable
+                position={cardPostition}
+                onDrag={dragEventHandler}
+                onStop={dragEndEventHandler}
+                onStart={dragStartEventHandler}
+              >
                 <img
-                  ref={dragCard}
-                  src={i === arr.length - 1 ? img?.image : cardBack}
+                  draggable={false}
+                  src={img.image}
                   data-code={img.code}
                   data-value={img.value}
                   data-color={suitColor(img.suit)}
-                  className="absolute h-52 cursor-grab"
-                  style={{ top: `${i * 1.5}rem` }}
+                  className="w-full h-full cursor-grab relative"
                 />
-              ))}
+              </Draggable>
+            ))}
+          </div>
+        </div>
+        <div className="col-span-2 gap-5 flex justify-end">
+          {result.map((suit) => (
+            <div
+              className="h-[10.4rem] w-[7.4rem] text-6xl border-dashed border rounded-lg flex flex-col items-center justify-center"
+              style={{
+                color: suitColor(suit.name),
+              }}
+            >
+              {suit.name === "hearts"
+                ? "♥️"
+                : suit.name === "clubs"
+                ? "♣️"
+                : suit.name === "spades"
+                ? "♠️"
+                : "♦️"}
             </div>
-          );
-        })}
+          ))}
+        </div>
+        <div className="col-span-3 gap-10 flex justify-around">
+          {tableau?.map((arr, i: number) => {
+            return (
+              <div className="w-full h-max relative flex flex-col items-center">
+                {arr?.map((img: any, j: number) =>
+                  j === arr.length - 1 ? (
+                    <Draggable
+                      key={i + j}
+                      position={cardPostition}
+                      onDrag={dragEventHandler}
+                      onStop={dragEndEventHandler}
+                      onStart={dragStartEventHandler}
+                    >
+                      <img
+                        draggable={false}
+                        src={img?.image}
+                        data-code={img.code}
+                        data-value={img.value}
+                        data-color={suitColor(img.suit)}
+                        className="absolute cursor-grab h-40"
+                        style={{ top: `${j * 0.8}rem`, zIndex: 10 }}
+                      />
+                    </Draggable>
+                  ) : (
+                    <img
+                      key={i + j}
+                      draggable={false}
+                      src={cardBack}
+                      data-code={img.code}
+                      data-value={img.value}
+                      data-color={suitColor(img.suit)}
+                      className="absolute cursor-grab h-40"
+                      style={{ top: `${j * 0.8}rem` }}
+                    />
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
       <div className="absolute w-full h-full bg-black opacity-75"></div>
     </div>

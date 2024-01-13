@@ -22,23 +22,3 @@ body {
   overflow: hidden;
 }
 
-.start {
-  border-radius: 0.5rem;
-  border: 1px solid transparent;
-  padding: 1.2rem 2rem;
-  font-size: 2rem;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-
-.start:hover {
-  border-color: #646cff;
-}
-
-.start:focus,
-.start:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
